@@ -79,22 +79,28 @@ class BiomedicalRAG:
             self.index = faiss.IndexFlatL2(self.embedding_dim)
             self.papers = []
     
+
     def add_papers(self, papers: List[Paper]) -> None:
         """
         Add papers to vector store
-        
+    
         Args:
-            papers: List of Paper objects
+        papers: List of Paper objects
         """
         logger.info(f"Adding {len(papers)} papers to index")
-        
+    
         texts = [f"{p.title}. {p.abstract}" for p in papers]
-        embeddings = self.embedder.encode(texts, show_progress_bar=True)
-        
-        self.index.add(np.array(embeddings).astype('float32'))
+        embeddings = self.embedder.encode(texts, show_progress_bar=False)  # Changed to False
+    
+        # Ensure embeddings are properly formatted
+        embeddings_array = np.array(embeddings).astype('float32')
+    
+        # Add to FAISS
+        self.index.add(embeddings_array)
         self.papers.extend(papers)
-        
+    
         logger.info(f"Total papers in index: {len(self.papers)}")
+        logger.info(f"FAISS index now has: {self.index.ntotal} vectors")
     
     def retrieve_context(
         self,
