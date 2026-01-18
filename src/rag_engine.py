@@ -79,26 +79,23 @@ class BiomedicalRAG:
             self.index = faiss.IndexFlatL2(self.embedding_dim)
             self.papers = []
     
-
     def add_papers(self, papers: List[Paper]) -> None:
         """
         Add papers to vector store
-    
+        
         Args:
-        papers: List of Paper objects
+            papers: List of Paper objects
         """
         logger.info(f"Adding {len(papers)} papers to index")
-    
+        
         texts = [f"{p.title}. {p.abstract}" for p in papers]
-        embeddings = self.embedder.encode(texts, show_progress_bar=False)  # Changed to False
-    
-        # Ensure embeddings are properly formatted
+        embeddings = self.embedder.encode(texts, show_progress_bar=False)
+        
         embeddings_array = np.array(embeddings).astype('float32')
-    
-        # Add to FAISS
+        
         self.index.add(embeddings_array)
         self.papers.extend(papers)
-    
+        
         logger.info(f"Total papers in index: {len(self.papers)}")
         logger.info(f"FAISS index now has: {self.index.ntotal} vectors")
     
@@ -106,8 +103,7 @@ class BiomedicalRAG:
         self,
         query: str,
         top_k: int = 5,
-        similarity_threshold: float = 0.5
-    
+        similarity_threshold: float = 0.0
     ) -> List[Paper]:
         """
         Retrieve relevant papers using semantic search
@@ -120,65 +116,29 @@ class BiomedicalRAG:
         Returns:
             List of relevant papers
         """
+        logger.info(f"Retrieving context for query: {query}")
+        logger.info(f"Index has {self.index.ntotal} vectors, papers list has {len(self.papers)} papers")
+        
+        if self.index.ntotal == 0 or len(self.papers) == 0:
+            logger.warning("Index is empty!")
+            return []
+        
         query_embedding = self.embedder.encode([query])[0]
         
         distances, indices = self.index.search(
             np.array([query_embedding]).astype('float32'),
-            top_k
+            min(top_k, len(self.papers))
         )
         
-        similarities = 1 / (1 + distances[0])
-        
-        relevant_papers = []
-        for idx, sim in zip(indices[0], similarities):
-            if idx < len(self.papers):  
-                relevant_papers.append(self.papers[idx])
-        
-        logger.info(f"Retrieved {len(relevant_papers)} relevant papers")
-        return relevant_papers
-
-    def retrieve_context(
-        self,
-        query: str,
-        top_k: int = 5,
-        similarity_threshold: float =  0.0  # Accept all results
-    ) -> List[Paper]:
-        """
-        Retrieve relevant papers using semantic search
-    
-        Args:
-        query: Research question
-        top_k: Number of papers to retrieve
-        similarity_threshold: Minimum similarity score
-        
-        Returns:
-        List of relevant papers
-        """
-        logger.info(f"Retrieving context for query: {query}")
-        logger.info(f"Index has {self.index.ntotal} vectors, papers list has {len(self.papers)} papers")
-    
-        if self.index.ntotal == 0 or len(self.papers) == 0:
-        logger.warning("Index is empty!")
-        return []
-    
-        query_embedding = self.embedder.encode([query])[0]
-    
-    # Search
-        distances, indices = self.index.search(
-        np.array([query_embedding]).astype('float32'),
-        min(top_k, len(self.papers))  # Don't request more than we have
-    )
-    
         logger.info(f"Search distances: {distances[0]}")
         logger.info(f"Search indices: {indices[0]}")
-    
-    # Return papers (no threshold filtering)
+        
         relevant_papers = []
         for idx in indices[0]:
             if 0 <= idx < len(self.papers):
                 relevant_papers.append(self.papers[idx])
                 logger.info(f"Added paper: {self.papers[idx].title}")
-    
+        
         logger.info(f"Retrieved {len(relevant_papers)} relevant papers")
         return relevant_papers
     
