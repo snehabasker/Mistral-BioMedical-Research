@@ -136,6 +136,51 @@ class BiomedicalRAG:
         
         logger.info(f"Retrieved {len(relevant_papers)} relevant papers")
         return relevant_papers
+
+    def retrieve_context(
+        self,
+        query: str,
+        top_k: int = 5,
+        similarity_threshold: float =  0.0  # Accept all results
+    ) -> List[Paper]:
+        """
+        Retrieve relevant papers using semantic search
+    
+        Args:
+        query: Research question
+        top_k: Number of papers to retrieve
+        similarity_threshold: Minimum similarity score
+        
+        Returns:
+        List of relevant papers
+        """
+        logger.info(f"Retrieving context for query: {query}")
+        logger.info(f"Index has {self.index.ntotal} vectors, papers list has {len(self.papers)} papers")
+    
+        if self.index.ntotal == 0 or len(self.papers) == 0:
+        logger.warning("Index is empty!")
+        return []
+    
+        query_embedding = self.embedder.encode([query])[0]
+    
+    # Search
+        distances, indices = self.index.search(
+        np.array([query_embedding]).astype('float32'),
+        min(top_k, len(self.papers))  # Don't request more than we have
+    )
+    
+        logger.info(f"Search distances: {distances[0]}")
+        logger.info(f"Search indices: {indices[0]}")
+    
+    # Return papers (no threshold filtering)
+        relevant_papers = []
+        for idx in indices[0]:
+            if 0 <= idx < len(self.papers):
+                relevant_papers.append(self.papers[idx])
+                logger.info(f"Added paper: {self.papers[idx].title}")
+    
+        logger.info(f"Retrieved {len(relevant_papers)} relevant papers")
+        return relevant_papers
     
     def generate_answer(
         self,
