@@ -100,7 +100,8 @@ class BiomedicalRAG:
         self,
         query: str,
         top_k: int = 5,
-        similarity_threshold: float = 0.75
+        similarity_threshold: float = 0.5
+    
     ) -> List[Paper]:
         """
         Retrieve relevant papers using semantic search
