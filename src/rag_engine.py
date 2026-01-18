@@ -125,7 +125,7 @@ class BiomedicalRAG:
         
         relevant_papers = []
         for idx, sim in zip(indices[0], similarities):
-            if sim >= similarity_threshold and idx < len(self.papers):
+            if idx < len(self.papers):  
                 relevant_papers.append(self.papers[idx])
         
         logger.info(f"Retrieved {len(relevant_papers)} relevant papers")
